@@ -9,7 +9,11 @@ use Simekja\Backend\ApiClient;
  */
 class CuzkApiClient {
 
-	public function __construct(string $baseUrl) {}
+	private ApiClient $apiClient;
+
+	public function __construct(string $baseUrl) {
+		$this->apiClient = new ApiClient($baseUrl);
+	}
 
     /**
      * Retrieves parcels within a specified bounding box.
