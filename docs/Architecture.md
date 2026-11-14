@@ -22,7 +22,7 @@ flowchart TD
 
     classDef frontend stroke: #29b826, stroke-width: 1.5px
     classDef backend stroke: #2563EB, stroke-width: 1.5px
-    classDef external stroke: #64748B, stroke-width: 1.5px
+    classDef external stroke: #a1a1a1, stroke-width: 1.5px
     class FRONTEND frontend
     class API,TRANSFORMER,LOGIC,REQUESTER backend
     class CUZK external
