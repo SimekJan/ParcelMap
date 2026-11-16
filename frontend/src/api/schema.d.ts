@@ -42,6 +42,10 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        Municipality: {
+            municipalityName: string;
+            geometry: string;
+        };
         Parcel: {
             parcelNumber: string;
             municipalityName: string;
@@ -67,13 +71,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Municipality geometries as GML (Geography Markup Language) XML */
+            /** @description Municipality names and geometries */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/gml+xml": string;
+                    "application/json": components["schemas"]["Municipality"][];
                 };
             };
         };

@@ -29,11 +29,13 @@ paths:
       operationId: getMunicipalities
       responses:
         '200':
-          description: Municipality geometries as GML (Geography Markup Language) XML
+          description: Municipality names and geometries
           content:
-            application/gml+xml:
+            application/json:
               schema:
-                type: string
+                type: array
+                items:
+                  $ref: '#/components/schemas/Municipality'
 
   /parcels:
     get:
@@ -63,6 +65,17 @@ paths:
 
 components:
   schemas:
+    Municipality:
+      type: object
+      required:
+        - municipalityName
+        - geometry
+      properties:
+        municipalityName:
+          type: string
+        geometry:
+          type: string
+          description: GML MultiSurface geometry
     Parcel:
       type: object
       required:

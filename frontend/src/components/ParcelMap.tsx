@@ -24,6 +24,7 @@ import Stroke from 'ol/style/Stroke.js';
 import Fill from 'ol/style/Fill.js';
 
 const MIN_PARCEL_ZOOM = 16;
+type Municipality = components['schemas']['Municipality']
 type Parcel = components['schemas']['Parcel']
 const INITIAL_MAP_EXTENT: [number, number, number, number] = [
   1681657.0769263285,
@@ -74,46 +75,31 @@ function parseParcelFeatures(parcels: Parcel[]): Feature<Geometry>[] {
   });
 }
 
-function parseMunicipalityFeatures(xml: string): Feature<Geometry>[] {
-  const xmlDocument = new DOMParser().parseFromString(xml, 'application/xml');
-  const parserError = xmlDocument.getElementsByTagName('parsererror')[0];
-
-  if (parserError) {
-    throw new Error(`XML parsing failed: ${parserError.textContent}`);
-  }
-
-  const geometries = Array.from(
-    xmlDocument.getElementsByTagNameNS(
-      'http://inspire.ec.europa.eu/schemas/au/4.0',
-      'geometry'
-    )
-  );
-
-  if (geometries.length === 0) {
-    throw new Error('No municipality geometries found in the XML.');
-  }
-
+function parseMunicipalityFeatures(municipalities: Municipality[]): Feature<Geometry>[] {
   const format = new GML32();
-  return geometries.map((geometryElement) => {
-    const geometry = format.readGeometry(geometryElement, {
+  return municipalities.map((municipality) => {
+    const xmlDocument = new DOMParser().parseFromString(
+      `<geometry>${municipality.geometry}</geometry>`,
+      'application/xml'
+    );
+    const parserError = xmlDocument.getElementsByTagName('parsererror')[0];
+
+    if (parserError) {
+      throw new Error(`XML parsing failed: ${parserError.textContent}`);
+    }
+
+    const geometry = format.readGeometry(xmlDocument.documentElement, {
       dataProjection: 'EPSG:3857',
       featureProjection: 'EPSG:3857',
     });
 
     if (!geometry) {
-      throw new Error('Could not parse a municipality geometry.');
+      throw new Error(`Could not parse geometry for municipality ${municipality.municipalityName}.`);
     }
-
-    const municipalityName = geometryElement.parentElement
-      ?.getElementsByTagNameNS(
-        'http://inspire.ec.europa.eu/schemas/gn/4.0',
-        'text'
-      )[0]
-      ?.textContent?.trim();
 
     return new Feature<Geometry>({
       geometry,
-      name: municipalityName || 'Unknown municipality',
+      name: municipality.municipalityName,
     });
   });
 }
@@ -304,9 +290,9 @@ export default function ParcelMap() {
         });
 
         void getMunicipalities()
-          .then((xml) => {
+          .then((municipalities) => {
             if (!disposed) {
-              municipalitySource.addFeatures(parseMunicipalityFeatures(xml));
+              municipalitySource.addFeatures(parseMunicipalityFeatures(municipalities));
             }
           })
           .catch((error: unknown) => {
