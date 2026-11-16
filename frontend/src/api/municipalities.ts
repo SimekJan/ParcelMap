@@ -3,16 +3,24 @@ import type { components } from './schema'
 
 type Municipality = components['schemas']['Municipality']
 
+let municipalitiesRequest: Promise<Municipality[]> | undefined
+
 /**
  * Retrieves a list of municipalities.
  * @returns A promise resolving to an array of municipalities.
  */
-export async function getMunicipalities(): Promise<Municipality[]> {
-  const { data, error } = await apiClient.GET('/municipalities')
-
-  if (error) {
-    throw error
+export function getMunicipalities(): Promise<Municipality[]> {
+  if (!municipalitiesRequest) {
+    municipalitiesRequest = apiClient.GET('/municipalities')
+      .then(({ data, error }) => {
+        if (error) throw error
+        return data
+      })
+      .catch((error: unknown) => {
+        municipalitiesRequest = undefined
+        throw error
+      })
   }
 
-  return data
+  return municipalitiesRequest
 }
