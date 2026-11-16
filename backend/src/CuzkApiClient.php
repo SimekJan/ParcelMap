@@ -22,10 +22,4 @@ class CuzkApiClient {
 		return ''; // Placeholder return value
 	}
 
-    /**
-     * Identifies a parcel based on the provided point's coordinates.
-     */
-	public function identifyParcel(/* TBD */): string {
-		return ''; // Placeholder return value
-	}
 }

@@ -28,15 +28,6 @@ class Router {
                 $this->respond(
                     $this->parcelService->getParcels(), 
                     200, 
-                    'application/geo+json'
-                );
-                return;
-            }
-
-            if ($path === '/parcels/identify') {
-                $this->respond(
-                    $this->parcelService->identifyParcel(),
-                    200,
                     'application/json'
                 );
                 return;

@@ -2,6 +2,7 @@
 import { useEffect, useRef } from 'react';
 import { getMunicipalities } from "../api/municipalities";
 import { getParcels } from "../api/parcels"
+import type { components } from '../api/schema'
 
 import 'ol/ol.css';
 
@@ -23,6 +24,7 @@ import Stroke from 'ol/style/Stroke.js';
 import Fill from 'ol/style/Fill.js';
 
 const MIN_PARCEL_ZOOM = 16;
+type Parcel = components['schemas']['Parcel']
 const INITIAL_MAP_EXTENT: [number, number, number, number] = [
   1681657.0769263285,
   6493348.868468613,
@@ -40,50 +42,34 @@ function getVisibleBbox(map: Map): number[] | null {
   return map.getView().calculateExtent(size);
 }
 
-function parseParcelFeatures(xml: string): Feature<Geometry>[] {
-  const xmlDocument = new DOMParser().parseFromString(xml, 'application/xml');
-  const parserError = xmlDocument.getElementsByTagName('parsererror')[0];
-
-  if (parserError) {
-    throw new Error(`XML parsing failed: ${parserError.textContent}`);
-  }
-
-  const polygons = Array.from(
-    xmlDocument.getElementsByTagNameNS(
-      'http://www.opengis.net/gml/3.2',
-      'Polygon'
-    )
-  );
-
-  if (polygons.length === 0) {
-    throw new Error('No GML Polygons found in the XML.');
-  }
-
+function parseParcelFeatures(parcels: Parcel[]): Feature<Geometry>[] {
   const format = new GML32();
-  return polygons.map((polygon) => {
-    const geometryProperty = polygon.parentElement;
+  return parcels.map((parcel) => {
+    const xmlDocument = new DOMParser().parseFromString(
+      `<geometry>${parcel.geometry}</geometry>`,
+      'application/xml'
+    );
+    const parserError = xmlDocument.getElementsByTagName('parsererror')[0];
 
-    if (!geometryProperty) {
-      throw new Error('A GML Polygon has no geometry property.');
+    if (parserError) {
+      throw new Error(`XML parsing failed: ${parserError.textContent}`);
     }
 
-    const geometry = format.readGeometry(geometryProperty, {
+    const geometry = format.readGeometry(xmlDocument.documentElement, {
       dataProjection: 'EPSG:3857',
       featureProjection: 'EPSG:3857',
     });
 
     if (!geometry) {
-      throw new Error('Could not parse a parcel geometry.');
+      throw new Error(`Could not parse geometry for parcel ${parcel.parcelNumber}.`);
     }
-
-    const parcelName = polygon.parentElement?.parentElement?.getElementsByTagNameNS(
-      'http://inspire.ec.europa.eu/schemas/cp/4.0',
-      'label'
-    )[0]?.textContent?.trim();
 
     return new Feature<Geometry>({
       geometry,
-      name: parcelName || 'Unknown parcel',
+      name: parcel.parcelNumber,
+      municipalityName: parcel.municipalityName,
+      area: parcel.area,
+      zoning: parcel.zoning,
     });
   });
 }
@@ -298,7 +284,7 @@ export default function ParcelMap() {
           console.log('Fetching parcels for bbox:', bbox);
 
           void getParcels(bbox)
-            .then((xml) => {
+            .then((parcels) => {
               if (
                 disposed ||
                 currentRequestId !== parcelRequestId ||
@@ -307,7 +293,7 @@ export default function ParcelMap() {
                 return;
               }
 
-              parcelSource.addFeatures(parseParcelFeatures(xml));
+              parcelSource.addFeatures(parseParcelFeatures(parcels));
             })
             .catch((error: unknown) => {
               console.error(

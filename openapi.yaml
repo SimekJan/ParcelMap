@@ -4,7 +4,7 @@ openapi: 3.0.3
 info:
   title: ParcelMap
   version: 1.0.0
-  description: API for retrieving parcel data from a CUZK database and serving it as GeoJSON.
+  description: API for retrieving parcel details and geometries from a CUZK database.
   contact:
     email: TBD@email.eu
   license:
@@ -50,31 +50,36 @@ paths:
               type: number
             minItems: 4
             maxItems: 4
-          description: minX,minY,maxX,maxY in EPSG:4326 (latitude/longitude)
+          description: minX,minY,maxX,maxY
       responses:
         '200':
-          description: GeoJSON FeatureCollection
+          description: Parcel details
           content:
-            application/geo+json:
+            application/json:
               schema:
-                type: object
+                type: array
+                items:
+                  $ref: '#/components/schemas/Parcel'
 
-  /parcels/identify:
-    get:
-      summary: Identify parcel at coordinates and return its details
-      operationId: identifyParcel
-      tags: [ Parcels ]
-      parameters:
-        - name: lat
-          in: query
-          required: true
-          schema:
-            type: number
-        - name: lng
-          in: query
-          required: true
-          schema:
-            type: number
-      responses:
-        '200':
-          description: Parcel details. Exact schema will be specified later.
+components:
+  schemas:
+    Parcel:
+      type: object
+      required:
+        - parcelNumber
+        - municipalityName
+        - area
+        - zoning
+        - geometry
+      properties:
+        parcelNumber:
+          type: string
+        municipalityName:
+          type: string
+        area:
+          type: string
+        zoning:
+          type: string
+        geometry:
+          type: string
+          description: GML geometry for the parcel

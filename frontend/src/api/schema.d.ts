@@ -38,27 +38,18 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/parcels/identify": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Identify parcel at coordinates and return its details */
-        get: operations["identifyParcel"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: never;
+    schemas: {
+        Parcel: {
+            parcelNumber: string;
+            municipalityName: string;
+            area: string;
+            zoning: string;
+            geometry: string;
+        };
+    };
     responses: never;
     parameters: never;
     requestBodies: never;
@@ -99,35 +90,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description GeoJSON FeatureCollection */
+            /** @description Parcel details */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/geo+json": Record<string, never>;
+                    "application/json": components["schemas"]["Parcel"][];
                 };
-            };
-        };
-    };
-    identifyParcel: {
-        parameters: {
-            query: {
-                lat: number;
-                lng: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Parcel details. Exact schema will be specified later. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
         };
     };
