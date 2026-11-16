@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/municipalities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get municipality geometries */
+        get: operations["getMunicipalities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/parcels": {
         parameters: {
             query?: never;
@@ -50,6 +67,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    getMunicipalities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Municipality geometries as GML (Geography Markup Language) XML */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/gml+xml": string;
+                };
+            };
+        };
+    };
     getParcels: {
         parameters: {
             query: {

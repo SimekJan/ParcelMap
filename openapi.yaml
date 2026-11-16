@@ -15,11 +15,26 @@ info:
 tags:
   - name: Parcels
     description: Parcel related endpoints
+  - name: Municipalities
+    description: Municipality related endpoints
 
 security:
   - BearerAuth: [ ]
 
 paths:
+  /municipalities:
+    get:
+      tags: [ Municipalities ]
+      summary: Get municipality geometries
+      operationId: getMunicipalities
+      responses:
+        '200':
+          description: Municipality geometries as GML (Geography Markup Language) XML
+          content:
+            application/gml+xml:
+              schema:
+                type: string
+
   /parcels:
     get:
       tags: [ Parcels ]
