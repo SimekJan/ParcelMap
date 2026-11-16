@@ -23,7 +23,15 @@ class Router {
                 return;
             }
 
-            $query = $_GET;
+            if ($path === '/municipalities') {
+                $this->respond(
+                    $this->parcelService->getMunicipalities(),
+                    200,
+                    'application/json'
+                );
+                return;
+            }
+
             if ($path === '/parcels') {
                 $this->respond(
                     $this->parcelService->getParcels(), 

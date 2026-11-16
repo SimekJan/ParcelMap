@@ -12,13 +12,32 @@ class ParcelService {
         private FormatTransformer $formatTransformer
     ) {}
 
-    /**
-     * Retrieves parcels within a specified bounding box and transforms the response to the desired format.
-     */
-    public function getParcels(/* TBD */): array {
-        // 1. Parse and validate the bounding box
-        // 2. Retrieve matching parcels from CUZK
-        // 3. Transform each result to the API schema
-        return []; // Placeholder return value
+    public function getMunicipalities(): array {
+        return $this->loadMockData('municipalities.json');
+    }
+
+    public function getParcels(): array {
+        return $this->loadMockData('parcels.json');
+    }
+
+    private function loadMockData(string $filename): array {
+        $path = __DIR__ . '/../data/' . $filename;
+        $contents = file_get_contents($path);
+
+        if ($contents === false) {
+            throw new \RuntimeException('Unable to read mock data.');
+        }
+
+        try {
+            $data = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $exception) {
+            throw new \RuntimeException('Unable to decode mock data.', 0, $exception);
+        }
+
+        if (!is_array($data)) {
+            throw new \RuntimeException('Mock data must be an array.');
+        }
+
+        return $data;
     }
 }
