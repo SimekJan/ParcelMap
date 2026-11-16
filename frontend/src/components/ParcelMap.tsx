@@ -11,6 +11,8 @@ import TileLayer from 'ol/layer/Tile.js';
 import VectorLayer from 'ol/layer/Vector.js';
 import OSM from 'ol/source/OSM.js';
 import VectorSource from 'ol/source/Vector.js';
+import Select from 'ol/interaction/Select.js';
+import { pointerMove } from 'ol/events/condition.js';
 
 import Feature from 'ol/Feature.js';
 import GML32 from 'ol/format/GML32.js';
@@ -122,10 +124,12 @@ export default function ParcelMap() {
 
   useEffect(() => {
     if (!mapElement.current) return;
+    const mapContainer = mapElement.current!;
 
     let map: Map | undefined;
     let disposed = false;
     let parcelRequestId = 0;
+    let clearHoveredFeature: (() => void) | undefined;
 
     function initializeMap(): void {
       try {
@@ -161,7 +165,7 @@ export default function ParcelMap() {
         });
 
         map = new Map({
-          target: mapElement.current!,
+          target: mapContainer,
           layers: [
             new TileLayer({
               source: new OSM(),
@@ -176,6 +180,42 @@ export default function ParcelMap() {
             zoom: 2,
           }),
         });
+
+        const parcelHoverInteraction = new Select({
+          condition: pointerMove,
+          layers: [parcelLayer],
+          style: new Style({
+            stroke: new Stroke({
+              color: '#e53935',
+              width: 4,
+            }),
+            fill: new Fill({
+              color: 'rgba(229, 57, 53, 0.4)',
+            }),
+          }),
+        });
+        const municipalityHoverInteraction = new Select({
+          condition: pointerMove,
+          layers: [municipalitiesLayer],
+          style: new Style({
+            stroke: new Stroke({
+              color: 'rgba(35, 91, 82, 0.95)',
+              width: 3,
+            }),
+            fill: new Fill({
+              color: 'rgba(80, 156, 142, 0.3)',
+            }),
+          }),
+        });
+        map.addInteraction(parcelHoverInteraction);
+        map.addInteraction(municipalityHoverInteraction);
+
+        const handlePointerLeave = (): void => {
+          parcelHoverInteraction.getFeatures().clear();
+          municipalityHoverInteraction.getFeatures().clear();
+        };
+        clearHoveredFeature = handlePointerLeave;
+        mapContainer.addEventListener('pointerleave', handlePointerLeave);
 
         const view = map.getView();
         const updateMinimumZoom = (): void => {
@@ -264,6 +304,9 @@ export default function ParcelMap() {
 
     return () => {
       disposed = true;
+      if (clearHoveredFeature) {
+        mapContainer.removeEventListener('pointerleave', clearHoveredFeature);
+      }
       map?.setTarget(undefined);
     };
   }, []);
