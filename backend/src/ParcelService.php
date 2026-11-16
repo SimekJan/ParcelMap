@@ -8,12 +8,14 @@ namespace Simekja\Backend;
 class ParcelService {
 
     public function __construct(
-        private CuzkApiClient $cuzkApiClient,
+        private AUApiClient $auApiClient,
+        private CPXApiClient $cpxApiClient,
         private FormatTransformer $formatTransformer
     ) {}
 
     public function getMunicipalities(): array {
-        return $this->loadMockData('municipalities.json');
+        $data = $this->auApiClient->getMunicipalities();
+        return $this->formatTransformer->transformMunicipalityData($data);
     }
 
     public function getParcels(): array {

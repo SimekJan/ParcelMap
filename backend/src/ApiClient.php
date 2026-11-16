@@ -21,7 +21,10 @@ class ApiClient {
         array $params = [],
         string $accept = 'application/json'
     ): string {
-        $url = $this->baseUrl . '/' . trim($endpoint, '/');
+        $url = $this->baseUrl;
+        if ($endpoint !== '') {
+            $url .= '/' . trim($endpoint, '/');
+        }
 
         if (!empty($params)) {
             $url .= '?' . http_build_query($params);

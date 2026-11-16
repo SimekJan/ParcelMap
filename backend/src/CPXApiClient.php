@@ -5,9 +5,9 @@ namespace Simekja\Backend;
 use Simekja\Backend\ApiClient;
 
 /**
- * CuzkApiClient class provides methods to interact with the CUZK API.
+ * CPXApiClient class provides methods to interact with the CPX Catastral Parcel API.
  */
-class CuzkApiClient {
+class CPXApiClient {
 
 	private ApiClient $apiClient;
 
@@ -19,7 +19,6 @@ class CuzkApiClient {
      * Retrieves parcels within a specified bounding box.
      */
 	public function getParcelsInBoundedBox(/* TBD */): string {
-		return ''; // Placeholder return value
+		return ''; // Placeholder return value		
 	}
-
 }

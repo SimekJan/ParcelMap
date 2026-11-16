@@ -2,12 +2,16 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-$baseUrl = 'https://example.com'; // Replace with the actual base URL of the CUZK API
+$baseUrlCPX = 'https://example.com';
+$baseUrlAU = "https://services.cuzk.gov.cz/wfs/inspire-AU-wfs.asp";
+$unitName = 'Jičín';
 
-$cuzkApiClient = new Simekja\Backend\CuzkApiClient($baseUrl);
+$cpxApiClient = new Simekja\Backend\CPXApiClient($baseUrlCPX);
+$auApiClient = new Simekja\Backend\AUApiClient($baseUrlAU, $unitName);
 
 $parcelService = new Simekja\Backend\ParcelService(
-	$cuzkApiClient,
+	$auApiClient,
+	$cpxApiClient,
 	new Simekja\Backend\FormatTransformer()
 );
 
