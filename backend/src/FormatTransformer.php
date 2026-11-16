@@ -89,32 +89,78 @@ class FormatTransformer {
         $parcels = [];
 
         foreach ($features as $feature) {
-            $parcelNumberNodes = $xpath->query('./*[local-name()="label"]', $feature);
-            $areaNodes = $xpath->query('./*[local-name()="areaValue"]', $feature);
-            $municipalityNodes = $xpath->query('./*[local-name()="administrativeUnit"]', $feature);
-            $zoningNodes = $xpath->query('./*[local-name()="zoning"]', $feature);
-            $geometryNodes = $xpath->query(
-                './*[local-name()="geometry"]/*[local-name()="Polygon"]',
-                $feature
-            );
+            if (!($feature instanceof \DOMElement)) {
+                continue;
+            }
+
+            $parcelNumber = '';
+            $area = '';
+            $municipalityName = null;
+            $zoning = null;
+            $geometry = null;
+
+            foreach ($feature->childNodes as $property) {
+                if (!($property instanceof \DOMElement)) {
+                    continue;
+                }
+
+                switch ($property->localName) {
+                    case 'label':
+                        $parcelNumber = trim($property->textContent);
+                        break;
+                    case 'areaValue':
+                        $area = trim($property->textContent);
+                        break;
+                    case 'administrativeUnit':
+                        $municipalityName = $property->getAttributeNS(
+                            'http://www.w3.org/1999/xlink',
+                            'title'
+                        ) ?: null;
+                        break;
+                    case 'zoning':
+                        $zoning = $property->getAttributeNS(
+                            'http://www.w3.org/1999/xlink',
+                            'title'
+                        ) ?: null;
+                        break;
+                    case 'geometry':
+                        foreach ($property->childNodes as $geometryCandidate) {
+                            if (
+                                $geometryCandidate instanceof \DOMElement &&
+                                $geometryCandidate->localName === 'Polygon'
+                            ) {
+                                $geometry = $geometryCandidate;
+                                break;
+                            }
+                        }
+                        break;
+                }
+            }
 
             if (
-                $parcelNumberNodes->length === 0 ||
-                $areaNodes->length === 0 ||
-                $municipalityNodes->length === 0 ||
-                $zoningNodes->length === 0 ||
-                $geometryNodes->length === 0
+                $municipalityName === null ||
+                $zoning === null ||
+                $parcelNumber === '' ||
+                $area === '' ||
+                $geometry === null
             ) {
                 continue;
             }
 
-            $municipalityName = $municipalityNodes->item(0)->attributes->getNamedItem('title')?->nodeValue;
-            $zoning = $zoningNodes->item(0)->attributes->getNamedItem('title')?->nodeValue;
-            $parcelNumber = trim($parcelNumberNodes->item(0)->textContent);
-            $area = trim($areaNodes->item(0)->textContent);
+            if ($geometry->namespaceURI !== null) {
+                $namespaceAttribute = $geometry->prefix
+                    ? 'xmlns:' . $geometry->prefix
+                    : 'xmlns';
+                $geometry->setAttributeNS(
+                    'http://www.w3.org/2000/xmlns/',
+                    $namespaceAttribute,
+                    $geometry->namespaceURI
+                );
+            }
+            $geometryXml = $document->saveXML($geometry);
 
-            if ($municipalityName === null || $zoning === null || $parcelNumber === '' || $area === '') {
-                continue;
+            if ($geometryXml === false) {
+                throw new \RuntimeException('Unable to serialize parcel geometry.');
             }
 
             $parcels[] = [
@@ -122,7 +168,7 @@ class FormatTransformer {
                 'municipalityName' => $municipalityName,
                 'area' => $area,
                 'zoning' => $zoning,
-                'geometry' => $geometryNodes->item(0)->C14N(true),
+                'geometry' => $geometryXml,
             ];
         }
 

@@ -45,18 +45,29 @@ function getVisibleBbox(map: Map): number[] | null {
 
 function parseParcelFeatures(parcels: Parcel[]): Feature<Geometry>[] {
   const format = new GML32();
-  return parcels.map((parcel) => {
-    const xmlDocument = new DOMParser().parseFromString(
-      `<geometry>${parcel.geometry}</geometry>`,
-      'application/xml'
-    );
-    const parserError = xmlDocument.getElementsByTagName('parsererror')[0];
+  const xmlDocument = new DOMParser().parseFromString(
+    `<geometryCollection>${parcels.map((parcel) => `<geometry>${parcel.geometry}</geometry>`).join('')}</geometryCollection>`,
+    'application/xml'
+  );
+  const parserError = xmlDocument.getElementsByTagName('parsererror')[0];
 
-    if (parserError) {
-      throw new Error(`XML parsing failed: ${parserError.textContent}`);
+  if (parserError) {
+    throw new Error(`XML parsing failed: ${parserError.textContent}`);
+  }
+
+  const geometryNodes = xmlDocument.getElementsByTagName('geometry');
+
+  if (geometryNodes.length !== parcels.length) {
+    throw new Error('Parcel geometry count does not match parcel count.');
+  }
+
+  return parcels.map((parcel, index) => {
+    const geometryNode = geometryNodes.item(index);
+    if (!geometryNode) {
+      throw new Error(`Could not find geometry for parcel ${parcel.parcelNumber}.`);
     }
 
-    const geometry = format.readGeometry(xmlDocument.documentElement, {
+    const geometry = format.readGeometry(geometryNode, {
       dataProjection: 'EPSG:3857',
       featureProjection: 'EPSG:3857',
     });

@@ -41,6 +41,7 @@ class ApiClient {
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPGET => true,
             CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_ENCODING => '',
             CURLOPT_TIMEOUT => 30
         ]);
         if (!$optionsSet) {
