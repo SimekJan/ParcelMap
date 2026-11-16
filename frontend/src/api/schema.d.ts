@@ -94,13 +94,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Parcel details */
+            /** @description Parcel geometries within the requested bounding box */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Parcel"][];
+                    "application/json": string[];
                 };
             };
         };

@@ -85,93 +85,16 @@ class FormatTransformer {
         }
 
         $xpath = new \DOMXPath($document);
-        $features = $xpath->query('//*[local-name()="CadastralParcel"]');
-        $parcels = [];
+        $members = $xpath->query('//*[local-name()="member"]');
+        $geometries = [];
 
-        foreach ($features as $feature) {
-            if (!($feature instanceof \DOMElement)) {
-                continue;
+        foreach ($members as $member) {
+            $geometry = trim($member->textContent);
+            if ($geometry !== '') {
+                $geometries[] = $geometry;
             }
-
-            $parcelNumber = '';
-            $area = '';
-            $municipalityName = null;
-            $zoning = null;
-            $geometry = null;
-
-            foreach ($feature->childNodes as $property) {
-                if (!($property instanceof \DOMElement)) {
-                    continue;
-                }
-
-                switch ($property->localName) {
-                    case 'label':
-                        $parcelNumber = trim($property->textContent);
-                        break;
-                    case 'areaValue':
-                        $area = trim($property->textContent);
-                        break;
-                    case 'administrativeUnit':
-                        $municipalityName = $property->getAttributeNS(
-                            'http://www.w3.org/1999/xlink',
-                            'title'
-                        ) ?: null;
-                        break;
-                    case 'zoning':
-                        $zoning = $property->getAttributeNS(
-                            'http://www.w3.org/1999/xlink',
-                            'title'
-                        ) ?: null;
-                        break;
-                    case 'geometry':
-                        foreach ($property->childNodes as $geometryCandidate) {
-                            if (
-                                $geometryCandidate instanceof \DOMElement &&
-                                $geometryCandidate->localName === 'Polygon'
-                            ) {
-                                $geometry = $geometryCandidate;
-                                break;
-                            }
-                        }
-                        break;
-                }
-            }
-
-            if (
-                $municipalityName === null ||
-                $zoning === null ||
-                $parcelNumber === '' ||
-                $area === '' ||
-                $geometry === null
-            ) {
-                continue;
-            }
-
-            if ($geometry->namespaceURI !== null) {
-                $namespaceAttribute = $geometry->prefix
-                    ? 'xmlns:' . $geometry->prefix
-                    : 'xmlns';
-                $geometry->setAttributeNS(
-                    'http://www.w3.org/2000/xmlns/',
-                    $namespaceAttribute,
-                    $geometry->namespaceURI
-                );
-            }
-            $geometryXml = $document->saveXML($geometry);
-
-            if ($geometryXml === false) {
-                throw new \RuntimeException('Unable to serialize parcel geometry.');
-            }
-
-            $parcels[] = [
-                'parcelNumber' => $parcelNumber,
-                'municipalityName' => $municipalityName,
-                'area' => $area,
-                'zoning' => $zoning,
-                'geometry' => $geometryXml,
-            ];
         }
 
-        return $parcels;
+        return $geometries;
     }
 }

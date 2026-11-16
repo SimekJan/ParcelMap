@@ -18,6 +18,7 @@ import { pointerMove, singleClick } from 'ol/events/condition.js';
 import Feature from 'ol/Feature.js';
 import GML32 from 'ol/format/GML32.js';
 import Geometry from 'ol/geom/Geometry.js';
+import { get as getProjection } from 'ol/proj.js';
 
 import Style from 'ol/style/Style.js';
 import Stroke from 'ol/style/Stroke.js';
@@ -25,7 +26,6 @@ import Fill from 'ol/style/Fill.js';
 
 const MIN_PARCEL_ZOOM = 16;
 type Municipality = components['schemas']['Municipality']
-type Parcel = components['schemas']['Parcel']
 const INITIAL_MAP_EXTENT: [number, number, number, number] = [
   1681657.0769263285,
   6493348.868468613,
@@ -43,10 +43,10 @@ function getVisibleBbox(map: Map): number[] | null {
   return map.getView().calculateExtent(size);
 }
 
-function parseParcelFeatures(parcels: Parcel[]): Feature<Geometry>[] {
+function parseParcelFeatures(geometries: string[]): Feature<Geometry>[] {
   const format = new GML32();
   const xmlDocument = new DOMParser().parseFromString(
-    `<geometryCollection>${parcels.map((parcel) => `<geometry>${parcel.geometry}</geometry>`).join('')}</geometryCollection>`,
+    `<geometryCollection>${geometries.map((geometry) => `<geometry>${geometry}</geometry>`).join('')}</geometryCollection>`,
     'application/xml'
   );
   const parserError = xmlDocument.getElementsByTagName('parsererror')[0];
@@ -57,31 +57,31 @@ function parseParcelFeatures(parcels: Parcel[]): Feature<Geometry>[] {
 
   const geometryNodes = xmlDocument.getElementsByTagName('geometry');
 
-  if (geometryNodes.length !== parcels.length) {
-    throw new Error('Parcel geometry count does not match parcel count.');
+  if (geometryNodes.length !== geometries.length) {
+    throw new Error('Parcel geometry count does not match response count.');
   }
 
-  return parcels.map((parcel, index) => {
+  return geometries.map((_, index) => {
     const geometryNode = geometryNodes.item(index);
     if (!geometryNode) {
-      throw new Error(`Could not find geometry for parcel ${parcel.parcelNumber}.`);
+      throw new Error(`Could not find parcel geometry ${index + 1}.`);
     }
 
     const geometry = format.readGeometry(geometryNode, {
-      dataProjection: 'EPSG:3857',
-      featureProjection: 'EPSG:3857',
+      dataProjection: getProjection('EPSG:3857')!,
+      featureProjection: getProjection('EPSG:3857')!,
     });
 
     if (!geometry) {
-      throw new Error(`Could not parse geometry for parcel ${parcel.parcelNumber}.`);
+      throw new Error(`Could not parse parcel geometry ${index + 1}.`);
     }
 
     return new Feature<Geometry>({
       geometry,
-      name: parcel.parcelNumber,
-      municipalityName: parcel.municipalityName,
-      area: parcel.area,
-      zoning: parcel.zoning,
+      name: geometryNode.firstElementChild?.getAttributeNS(
+        'http://www.opengis.net/gml/3.2',
+        'id'
+      ) ?? `Parcel ${index + 1}`,
     });
   });
 }

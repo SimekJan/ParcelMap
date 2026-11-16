@@ -57,13 +57,14 @@ paths:
           description: minX,minY,maxX,maxY
       responses:
         '200':
-          description: Parcel details
+          description: Parcel geometries within the requested bounding box
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Parcel'
+                  type: string
+                  description: GML Polygon geometry
 
 components:
   schemas:
