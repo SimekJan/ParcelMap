@@ -12,7 +12,7 @@ import VectorLayer from 'ol/layer/Vector.js';
 import OSM from 'ol/source/OSM.js';
 import VectorSource from 'ol/source/Vector.js';
 import Select from 'ol/interaction/Select.js';
-import { pointerMove } from 'ol/events/condition.js';
+import { pointerMove, singleClick } from 'ol/events/condition.js';
 
 import Feature from 'ol/Feature.js';
 import GML32 from 'ol/format/GML32.js';
@@ -76,7 +76,15 @@ function parseParcelFeatures(xml: string): Feature<Geometry>[] {
       throw new Error('Could not parse a parcel geometry.');
     }
 
-    return new Feature<Geometry>({ geometry });
+    const parcelName = polygon.parentElement?.parentElement?.getElementsByTagNameNS(
+      'http://inspire.ec.europa.eu/schemas/cp/4.0',
+      'label'
+    )[0]?.textContent?.trim();
+
+    return new Feature<Geometry>({
+      geometry,
+      name: parcelName || 'Unknown parcel',
+    });
   });
 }
 
@@ -110,7 +118,17 @@ function parseMunicipalityFeatures(xml: string): Feature<Geometry>[] {
       throw new Error('Could not parse a municipality geometry.');
     }
 
-    return new Feature<Geometry>({ geometry });
+    const municipalityName = geometryElement.parentElement
+      ?.getElementsByTagNameNS(
+        'http://inspire.ec.europa.eu/schemas/gn/4.0',
+        'text'
+      )[0]
+      ?.textContent?.trim();
+
+    return new Feature<Geometry>({
+      geometry,
+      name: municipalityName || 'Unknown municipality',
+    });
   });
 }
 
@@ -194,6 +212,7 @@ export default function ParcelMap() {
             }),
           }),
         });
+
         const municipalityHoverInteraction = new Select({
           condition: pointerMove,
           layers: [municipalitiesLayer],
@@ -207,6 +226,7 @@ export default function ParcelMap() {
             }),
           }),
         });
+
         map.addInteraction(parcelHoverInteraction);
         map.addInteraction(municipalityHoverInteraction);
 
@@ -216,6 +236,29 @@ export default function ParcelMap() {
         };
         clearHoveredFeature = handlePointerLeave;
         mapContainer.addEventListener('pointerleave', handlePointerLeave);
+
+        const parcelClickInteraction = new Select({
+          condition: singleClick,
+          layers: [parcelLayer],
+          style: null,
+        });
+        const municipalityClickInteraction = new Select({
+          condition: singleClick,
+          layers: [municipalitiesLayer],
+          style: null,
+        });
+        parcelClickInteraction.on('select', (event) => {
+          const parcel = event.selected[0];
+          if (parcel) console.log('Parcel clicked:', parcel.get('name'));
+        });
+        municipalityClickInteraction.on('select', (event) => {
+          const municipality = event.selected[0];
+          if (municipality) {
+            console.log('Municipality clicked:', municipality.get('name'));
+          }
+        });
+        map.addInteraction(parcelClickInteraction);
+        map.addInteraction(municipalityClickInteraction);
 
         const view = map.getView();
         const updateMinimumZoom = (): void => {
