@@ -3,4 +3,10 @@ import type { paths } from './schema'
 
 export const apiClient = createClient<paths>({
   baseUrl: import.meta.env.DEV ? '' : import.meta.env.VITE_API_BASE_URL ?? '',
+  querySerializer: {
+    array: {
+      style: 'form',
+      explode: false,
+    },
+  },
 })

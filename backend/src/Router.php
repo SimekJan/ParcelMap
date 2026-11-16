@@ -33,8 +33,22 @@ class Router {
             }
 
             if ($path === '/parcels') {
+                $bbox = $_GET['bbox'] ?? null;
+                if (is_string($bbox)) {
+                    $bbox = explode(',', $bbox);
+                }
+
+                if (
+                    !is_array($bbox) ||
+                    count($bbox) !== 4 ||
+                    count(array_filter($bbox, static fn ($coordinate): bool => !is_numeric($coordinate))) > 0
+                ) {
+                    $this->respond(['error' => 'bbox must contain four numbers'], 400);
+                    return;
+                }
+
                 $this->respond(
-                    $this->parcelService->getParcels(), 
+                    $this->parcelService->getParcels(array_map('floatval', array_values($bbox))),
                     200, 
                     'application/json'
                 );
@@ -43,6 +57,8 @@ class Router {
 
             $this->respond(['error' => 'Not found'], 404);
 
+        } catch (\InvalidArgumentException $exception) {
+            $this->respond(['error' => $exception->getMessage()], 400);
         } catch (\RuntimeException $exception) {
             $this->respond(['error' => $exception->getMessage()], 500);
         }

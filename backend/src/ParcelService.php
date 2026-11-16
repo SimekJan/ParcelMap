@@ -18,8 +18,9 @@ class ParcelService {
         return $this->formatTransformer->transformMunicipalityData($data);
     }
 
-    public function getParcels(): array {
-        return $this->loadMockData('parcels.json');
+    public function getParcels(array $bbox): array {
+        $data = $this->cpxApiClient->getParcelsInBoundedBox($bbox);
+        return $this->formatTransformer->transformParcelData($data);
     }
 
     private function loadMockData(string $filename): array {

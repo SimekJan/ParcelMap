@@ -18,7 +18,18 @@ class CPXApiClient {
     /**
      * Retrieves parcels within a specified bounding box.
      */
-	public function getParcelsInBoundedBox(/* TBD */): string {
-		return ''; // Placeholder return value		
+	public function getParcelsInBoundedBox(array $bbox): string {
+		if (count($bbox) !== 4 || count(array_filter($bbox, static fn ($coordinate): bool => !is_numeric($coordinate))) > 0) {
+			throw new \InvalidArgumentException('Bounding box must contain four numbers.');
+		}
+
+		return $this->apiClient->get('', [
+			'service' => 'WFS',
+			'version' => '2.0.0',
+			'request' => 'GetFeature',
+			'typeNames' => 'CadastralParcel',
+			'BBOX' => implode(',', array_map('strval', array_values($bbox))),
+			'srsName' => 'http://www.opengis.net/def/crs/EPSG/0/3857',
+		], 'application/gml+xml; version=3.2');
 	}
 }
