@@ -13,7 +13,7 @@ import VectorLayer from 'ol/layer/Vector.js';
 import OSM from 'ol/source/OSM.js';
 import VectorSource from 'ol/source/Vector.js';
 import Select from 'ol/interaction/Select.js';
-import { pointerMove } from 'ol/events/condition.js';
+import { click, pointerMove } from 'ol/events/condition.js';
 
 import Feature from 'ol/Feature.js';
 import GML32 from 'ol/format/GML32.js';
@@ -222,6 +222,20 @@ export default function ParcelMap({ onParcelClick }: ParcelMapProps) {
           }),
         });
 
+        const parcelSelectionInteraction = new Select({
+          condition: click,
+          layers: [parcelLayer],
+          style: new Style({
+            stroke: new Stroke({
+              color: '#e53935',
+              width: 4,
+            }),
+            fill: new Fill({
+              color: 'rgba(0, 167, 160, 0.35)',
+            }),
+          }),
+        });
+
         const municipalityHoverInteraction = new Select({
           condition: pointerMove,
           layers: [municipalitiesLayer],
@@ -238,6 +252,7 @@ export default function ParcelMap({ onParcelClick }: ParcelMapProps) {
 
         map.addInteraction(parcelHoverInteraction);
         map.addInteraction(municipalityHoverInteraction);
+        map.addInteraction(parcelSelectionInteraction);
 
         const handlePointerLeave = (): void => {
           parcelHoverInteraction.getFeatures().clear();
