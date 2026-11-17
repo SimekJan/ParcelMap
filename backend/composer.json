@@ -1,9 +1,6 @@
 {
     "name": "simekja/backend",
     "type": "project",
-    "require": {
-        "proj4php/proj4php": "^2.0"
-    },
     "autoload": {
         "psr-4": {
             "Simekja\\Backend\\": "src/"
