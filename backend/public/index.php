@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-$baseUrlCPX = 'https://services.cuzk.gov.cz/wfs/inspire-cpx-wfs.asp';
+$baseUrlCPX = 'https://services.cuzk.gov.cz/wfs/inspire-CPX-wfs.asp';
 $baseUrlAU = "https://services.cuzk.gov.cz/wfs/inspire-AU-wfs.asp";
 $unitName = 'Jičín';
 

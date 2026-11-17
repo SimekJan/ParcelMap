@@ -13,7 +13,7 @@ import VectorLayer from 'ol/layer/Vector.js';
 import OSM from 'ol/source/OSM.js';
 import VectorSource from 'ol/source/Vector.js';
 import Select from 'ol/interaction/Select.js';
-import { pointerMove, singleClick } from 'ol/events/condition.js';
+import { pointerMove } from 'ol/events/condition.js';
 
 import Feature from 'ol/Feature.js';
 import GML32 from 'ol/format/GML32.js';
@@ -124,9 +124,18 @@ function parseMunicipalityFeatures(municipalities: Municipality[]): Feature<Geom
  * Map coordinates and bbox values use EPSG:3857; parcel geometry is hidden
  * below the minimum parcel zoom level.
  */
-export default function ParcelMap() {
+type ParcelMapProps = {
+  onParcelClick: (longitude: number, latitude: number) => void;
+};
+
+export default function ParcelMap({ onParcelClick }: ParcelMapProps) {
   const mapElement = useRef<HTMLDivElement | null>(null);
+  const onParcelClickRef = useRef(onParcelClick);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    onParcelClickRef.current = onParcelClick;
+  }, [onParcelClick]);
 
   useEffect(() => {
     if (!mapElement.current) return;
@@ -136,6 +145,7 @@ export default function ParcelMap() {
     let disposed = false;
     let pendingRequests = 0;
     let clearHoveredFeature: (() => void) | undefined;
+    let resizeObserver: ResizeObserver | undefined;
 
     const beginLoading = (): void => {
       pendingRequests += 1;
@@ -236,28 +246,23 @@ export default function ParcelMap() {
         clearHoveredFeature = handlePointerLeave;
         mapContainer.addEventListener('pointerleave', handlePointerLeave);
 
-        const parcelClickInteraction = new Select({
-          condition: singleClick,
-          layers: [parcelLayer],
-          style: null,
-        });
-        const municipalityClickInteraction = new Select({
-          condition: singleClick,
-          layers: [municipalitiesLayer],
-          style: null,
-        });
-        parcelClickInteraction.on('select', (event) => {
-          const parcel = event.selected[0];
-          if (parcel) console.log('Parcel clicked:', parcel.get('name'));
-        });
-        municipalityClickInteraction.on('select', (event) => {
-          const municipality = event.selected[0];
-          if (municipality) {
-            console.log('Municipality clicked:', municipality.get('name'));
+        map.on('singleclick', (event) => {
+          if (parcelLayer.getVisible()) {
+            onParcelClickRef.current(event.coordinate[0], event.coordinate[1]);
+            return;
+          }
+
+          const municipality = map!.forEachFeatureAtPixel(event.pixel, (feature) => feature, {
+            layerFilter: (layer) => layer === municipalitiesLayer,
+          });
+          const geometry = municipality?.getGeometry();
+          if (geometry) {
+            map!.getView().fit(geometry.getExtent(), { padding: [32, 32, 32, 32], duration: 500, maxZoom: 19 });
           }
         });
-        map.addInteraction(parcelClickInteraction);
-        map.addInteraction(municipalityClickInteraction);
+
+        resizeObserver = new ResizeObserver(() => map?.updateSize());
+        resizeObserver.observe(mapContainer);
 
         const view = map.getView();
         const updateMinimumZoom = (): void => {
@@ -377,6 +382,7 @@ export default function ParcelMap() {
       if (clearHoveredFeature) {
         mapContainer.removeEventListener('pointerleave', clearHoveredFeature);
       }
+      resizeObserver?.disconnect();
       map?.setTarget(undefined);
     };
   }, []);

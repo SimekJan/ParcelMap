@@ -66,8 +66,59 @@ paths:
                   type: string
                   description: GML Polygon geometry
 
+  /parcels/at-point:
+    get:
+      tags: [ Parcels ]
+      summary: Get parcels at a point
+      operationId: getParcelAtPoint
+      parameters:
+        - name: long
+          in: query
+          required: true
+          description: X coordinate in EPSG:3857 metres
+          schema:
+            type: number
+        - name: lat
+          in: query
+          required: true
+          description: Y coordinate in EPSG:3857 metres
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Matching parcels, or an empty array when none are found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ParcelDetails'
+        '400':
+          description: Missing or invalid coordinates
+        '502':
+          description: Parcel service unavailable or returned invalid data
+
 components:
   schemas:
+    ParcelDetails:
+      type: object
+      required: [ id, properties ]
+      properties:
+        id:
+          type: string
+          description: Upstream GML feature identifier, when available
+        properties:
+          type: array
+          items:
+            type: object
+            required: [ name, value ]
+            properties:
+              name:
+                type: string
+                description: Upstream field corresponding to parcel number, municipality, cadastral area, area or parcel kind
+                enum: [ label, administrativeUnit, zoning, areaValue, landType ]
+              value:
+                type: string
     Municipality:
       type: object
       required:

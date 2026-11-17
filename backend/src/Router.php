@@ -32,6 +32,23 @@ class Router {
                 return;
             }
 
+            if ($path === '/parcels/at-point') {
+                $longitude = $_GET['long'] ?? null;
+                $latitude = $_GET['lat'] ?? null;
+                if (!is_string($longitude) || !is_numeric($longitude) || !is_finite((float) $longitude) ||
+                    !is_string($latitude) || !is_numeric($latitude) || !is_finite((float) $latitude)) {
+                    $this->respond(['error' => 'long and lat must be finite numbers'], 400);
+                    return;
+                }
+
+                try {
+                    $this->respond($this->parcelService->getParcelAtPoint((float) $longitude, (float) $latitude));
+                } catch (\RuntimeException $exception) {
+                    $this->respond(['error' => 'Unable to retrieve parcel details'], 502);
+                }
+                return;
+            }
+
             if ($path === '/parcels') {
                 $bbox = $_GET['bbox'] ?? null;
                 if (is_string($bbox)) {

@@ -1,4 +1,19 @@
 import { apiClient } from './client'
+import type { components } from './schema'
+
+export type ParcelDetails = components['schemas']['ParcelDetails']
+
+export async function getParcelAtPoint(long: number, lat: number): Promise<ParcelDetails[]> {
+    const { data, error, response } = await apiClient.GET('/parcels/at-point', {
+        params: { query: { long, lat } },
+    })
+
+    if (error || !response.ok || !data) {
+        throw new Error('Unable to retrieve parcel details.')
+    }
+
+    return data
+}
 
 /**
  * Retrieves parcels within a specified bounding box.

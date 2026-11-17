@@ -38,12 +38,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/parcels/at-point": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get parcels at a point */
+        get: operations["getParcelAtPoint"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ParcelDetails: {
+            /** @description Upstream GML feature identifier, when available */
+            id: string;
+            properties: {
+                /**
+                 * @description Upstream field corresponding to parcel number, municipality, cadastral area, area or parcel kind
+                 * @enum {string}
+                 */
+                name: "label" | "administrativeUnit" | "zoning" | "areaValue" | "landType";
+                value: string;
+            }[];
+        };
         Municipality: {
             municipalityName: string;
+            /** @description GML MultiSurface geometry */
             geometry: string;
         };
         Parcel: {
@@ -51,6 +81,7 @@ export interface components {
             municipalityName: string;
             area: string;
             zoning: string;
+            /** @description GML geometry for the parcel */
             geometry: string;
         };
     };
@@ -85,7 +116,7 @@ export interface operations {
     getParcels: {
         parameters: {
             query: {
-                /** @description minX,minY,maxX,maxY in EPSG:4326 (latitude/longitude) */
+                /** @description minX,minY,maxX,maxY */
                 bbox: number[];
             };
             header?: never;
@@ -102,6 +133,45 @@ export interface operations {
                 content: {
                     "application/json": string[];
                 };
+            };
+        };
+    };
+    getParcelAtPoint: {
+        parameters: {
+            query: {
+                /** @description X coordinate in EPSG:3857 metres */
+                long: number;
+                /** @description Y coordinate in EPSG:3857 metres */
+                lat: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Matching parcels, or an empty array when none are found */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParcelDetails"][];
+                };
+            };
+            /** @description Missing or invalid coordinates */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Parcel service unavailable or returned invalid data */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

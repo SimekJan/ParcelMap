@@ -23,6 +23,11 @@ class ParcelService {
         return $this->formatTransformer->transformParcelData($data);
     }
 
+    public function getParcelAtPoint(float $longitude, float $latitude): array {
+        $data = $this->cpxApiClient->getParcelAtPoint($longitude, $latitude);
+        return $this->formatTransformer->transformParcelDetails($data);
+    }
+
     private function loadMockData(string $filename): array {
         $path = __DIR__ . '/../data/' . $filename;
         $contents = file_get_contents($path);
