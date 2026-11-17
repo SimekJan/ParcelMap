@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getMunicipalities } from "../api/municipalities";
 import { getParcels } from "../api/parcels"
 import type { components } from '../api/schema'
@@ -126,6 +126,7 @@ function parseMunicipalityFeatures(municipalities: Municipality[]): Feature<Geom
  */
 export default function ParcelMap() {
   const mapElement = useRef<HTMLDivElement | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!mapElement.current) return;
@@ -133,7 +134,18 @@ export default function ParcelMap() {
 
     let map: Map | undefined;
     let disposed = false;
+    let pendingRequests = 0;
     let clearHoveredFeature: (() => void) | undefined;
+
+    const beginLoading = (): void => {
+      pendingRequests += 1;
+      setIsLoading(true);
+    };
+
+    const endLoading = (): void => {
+      pendingRequests -= 1;
+      if (!disposed && pendingRequests === 0) setIsLoading(false);
+    };
 
     function initializeMap(): void {
       try {
@@ -281,6 +293,7 @@ export default function ParcelMap() {
           if (!bbox) return;
           console.log('Fetching parcels for bbox:', bbox);
 
+          beginLoading();
           void getParcels(bbox)
             .then((parcels) => {
               if (disposed) return;
@@ -325,9 +338,11 @@ export default function ParcelMap() {
                 'Failed to fetch parcels for the visible map extent:',
                 error instanceof Error ? error.message : error
               );
-            });
+            })
+            .finally(endLoading);
         });
 
+        beginLoading();
         void getMunicipalities()
           .then((municipalities) => {
             if (!disposed) {
@@ -339,7 +354,8 @@ export default function ParcelMap() {
               'Failed to fetch municipality boundaries:',
               error instanceof Error ? error.message : error
             );
-          });
+          })
+          .finally(endLoading);
 
         // Keep the requested area visible, fitting the full extent to the screen.
         view.fit(INITIAL_MAP_EXTENT, {
@@ -366,12 +382,20 @@ export default function ParcelMap() {
   }, []);
 
   return (
-    <div
-      ref={mapElement}
-      style={{
-        width: '100%',
-        height: '100%',
-      }}
-    />
+    <div className="relative h-full w-full">
+      <div ref={mapElement} className="h-full w-full" />
+      {isLoading && (
+        <div
+          role="status"
+          className="pointer-events-none absolute right-3 top-3 flex items-center gap-2 rounded bg-white px-3 py-2 text-sm text-gray-800 shadow-md"
+        >
+          <span
+            aria-hidden="true"
+            className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-teal-700 motion-reduce:animate-none"
+          />
+          Loading map data
+        </div>
+      )}
+    </div>
   );
 }
