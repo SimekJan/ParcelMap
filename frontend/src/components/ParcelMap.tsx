@@ -25,6 +25,7 @@ import Stroke from 'ol/style/Stroke.js';
 import Fill from 'ol/style/Fill.js';
 
 const MIN_PARCEL_ZOOM = 16;
+const MAX_CACHED_PARCELS = 10000;
 type Municipality = components['schemas']['Municipality']
 const INITIAL_MAP_EXTENT: [number, number, number, number] = [
   1681657.0769263285,
@@ -76,13 +77,16 @@ function parseParcelFeatures(geometries: string[]): Feature<Geometry>[] {
       throw new Error(`Could not parse parcel geometry ${index + 1}.`);
     }
 
-    return new Feature<Geometry>({
+    const id = geometryNode.firstElementChild?.getAttributeNS(
+      'http://www.opengis.net/gml/3.2',
+      'id'
+    );
+    const feature = new Feature<Geometry>({
       geometry,
-      name: geometryNode.firstElementChild?.getAttributeNS(
-        'http://www.opengis.net/gml/3.2',
-        'id'
-      ) ?? `Parcel ${index + 1}`,
+      name: id ?? `Parcel ${index + 1}`,
     });
+    feature.setId(id ? `id:${id}` : `geometry:${geometries[index]}`);
+    return feature;
   });
 }
 
@@ -129,12 +133,12 @@ export default function ParcelMap() {
 
     let map: Map | undefined;
     let disposed = false;
-    let parcelRequestId = 0;
     let clearHoveredFeature: (() => void) | undefined;
 
     function initializeMap(): void {
       try {
         const parcelSource = new VectorSource();
+        let cachedParcels: Feature<Geometry>[] = [];
 
         const parcelLayer = new VectorLayer({
           source: parcelSource,
@@ -262,7 +266,6 @@ export default function ParcelMap() {
 
         // Recheck parcel visibility and query the current extent after each move.
         map.on('moveend', () => {
-          const currentRequestId = ++parcelRequestId;
           const zoom = map!.getView().getZoom() ?? 0;
           const showParcels = zoom >= MIN_PARCEL_ZOOM;
           parcelLayer.setVisible(showParcels);
@@ -271,26 +274,51 @@ export default function ParcelMap() {
           console.log('Map moved. Current zoom level:', zoom);
 
           if (!showParcels) {
-            parcelSource.clear(true);
             return;
           }
 
           const bbox = getVisibleBbox(map!);
           if (!bbox) return;
-          parcelSource.clear(true);
           console.log('Fetching parcels for bbox:', bbox);
 
           void getParcels(bbox)
             .then((parcels) => {
-              if (
-                disposed ||
-                currentRequestId !== parcelRequestId ||
-                (view.getZoom() ?? 0) < MIN_PARCEL_ZOOM
-              ) {
+              if (disposed) return;
+
+              const seenIds = new Set<string | number>();
+              const features = parseParcelFeatures(parcels).filter((feature) => {
+                const id = feature.getId()!;
+                if (seenIds.has(id) || parcelSource.getFeatureById(id)) return false;
+                seenIds.add(id);
+                return true;
+              });
+              if (features.length === 0) return;
+
+              const candidates = [...cachedParcels, ...features];
+              const excess = candidates.length - MAX_CACHED_PARCELS;
+              if (excess <= 0) {
+                cachedParcels = candidates;
+                parcelSource.addFeatures(features);
                 return;
               }
 
-              parcelSource.addFeatures(parseParcelFeatures(parcels));
+              const visibleExtent = getVisibleBbox(map!);
+              const outsideViewport = visibleExtent
+                ? candidates.filter((feature) => !feature.getGeometry()?.intersectsExtent(visibleExtent))
+                : candidates;
+              const evicted = new Set(outsideViewport.slice(0, excess));
+              if (evicted.size < excess) {
+                for (const feature of candidates) {
+                  if (evicted.size >= excess) break;
+                  evicted.add(feature);
+                }
+              }
+
+              const removed = cachedParcels.filter((feature) => evicted.has(feature));
+              if (removed.length > 0) parcelSource.removeFeatures(removed);
+              cachedParcels = candidates.filter((feature) => !evicted.has(feature));
+              const added = features.filter((feature) => !evicted.has(feature));
+              if (added.length > 0) parcelSource.addFeatures(added);
             })
             .catch((error: unknown) => {
               console.error(
